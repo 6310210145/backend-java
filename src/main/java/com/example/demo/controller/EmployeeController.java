@@ -2,8 +2,10 @@ package com.example.demo.controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.tomcat.jni.Sockaddr;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.StreamingHttpOutputMessage.Body;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,64 +16,70 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.model.Employee;
+import com.example.demo.repository.*;
 
 @RestController
 public class EmployeeController {
 
+	@Autowired
+	EmployeeRepository employeeRepository;
+	
 	private List<Employee> data = new ArrayList<Employee>();
 	
 	@GetMapping("/employee")
 	public List<Employee> getEmployee() {
-		return data;
+		return employeeRepository.findAll();
 	}
 	
 	@PostMapping("/employee")
 	public Employee addEmployee(@RequestBody Employee body) {
 		
-		for(int i = 0; i <data.size(); i++) {
-			if(data.get(i).getEmployeeId() == body.getEmployeeId()) {
-				return null;
-			}
+			return employeeRepository.save(body);
 		}
-		data.add(body);
-		return body;
-	}
+	
 	
 	@GetMapping("/employee/{employeeId}")
-	public Employee getEmployeeDetail(@PathVariable Integer employeeId) {
-		System.out.println("employeeId = " + employeeId);
-		for(int i = 0; i <data.size(); i++) {
-			if(employeeId == data.get(i).getEmployeeId()) {
-				return data.get(i);
-			}
-		}
-		return null;
+	public Optional<Employee> getEmployeeDetail(@PathVariable Integer employeeId) {
+		Optional<Employee> employee = employeeRepository.findById(employeeId);
+		
+		return employee;
 	}
 	
 	@PutMapping("/employee/{employeeId}")
 	public Employee updateEmployee(@PathVariable Integer employeeId,@RequestBody Employee body) {
-		for(int i = 0; i <data.size(); i++) {
-			if(employeeId == data.get(i).getEmployeeId()) {
-				data.get(i).setFirstName(body.getFirstName());
-				data.get(i).setLastName(body.getLastName());
-				data.get(i).setSalary(body.getSalary());
+		
+		Optional<Employee> employee = employeeRepository.findById(employeeId);
+		if(employee.isPresent()) {
+				Employee employeeEdit = employee.get();
+				employeeEdit.setFirstName(body.getFirstName());
+				employeeEdit.setLastName(body.getLastName());
+				employeeEdit.setSalary(body.getSalary());
+				employeeEdit.setEmployeeId(body.getEmployeeId());
 				
-				return data.get(i);
-			
-			}
+				employeeRepository.save(employeeEdit);
+				
+				return employeeEdit;
+		}else {
+			return null;
 		}
-		return null;
+		
 	}
 	
 	@DeleteMapping("/employee/{employeeId}")
 	public String deleteEmployee(@PathVariable Integer employeeId) {
-		for(int i = 0; i <data.size(); i++) {
-			if(employeeId == data.get(i).getEmployeeId()) {
-				data.remove(i);
-				return "delete Seccess";
-			}
+		
+		Optional<Employee> employee = employeeRepository.findById(employeeId);
+		
+		if(employee.isPresent()) {
+			
+			employeeRepository.delete(employee.get());
+			
+			return "Delete Sucsess";
+	
+		}else {
+			return "Employee not found";
 		}
-		return "employee not found";
+		
 	}
 	
 }
